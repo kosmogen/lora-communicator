@@ -1,0 +1,3 @@
+[submodule "src/conbadge"]
+	path = src/conbadge
+	url = https://github.com/kosmogen/featherwing-keyboard-conbadge.git

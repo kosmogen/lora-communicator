@@ -1,15 +1,17 @@
 #include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
 
 #include <SPI.h>
 #include <RH_RF95.h>
 
-#include <BBQ10Keyboard.h>
+#include <SdFat.h>
+
 #include <Adafruit_NeoPixel.h>
+#include "src\conbadge\featherwing_keyboard_conbadge.h"
 
 #define NEOPIXEL_PIN 11
 #define STATUS_TIME 5000
 
+#define SD_CS  5
 #define TFT_CS 9
 #define TFT_DC 10
 
@@ -40,6 +42,8 @@ const uint8_t BEACON_TXT[] = "Hello, world!";
 // Comment out this line to suppress serial output
 #define DEBUG
 
+#define GUESS_PIN 2
+
 int bg_color = BLACK;
 int acc_color = BLUE;
 int text_color = WHITE;
@@ -64,11 +68,20 @@ BBQ10Keyboard keyboard;
 volatile bool dataReady = false;
 const int interruptPin = 6;
 
+SdFat SD;
+Adafruit_ImageReader reader(SD);
+Adafruit_Image img;
+
+Conbadge badge(&tft, &keyboard, &reader, "UwU", acc_color, bg_color, BORDER);
+
+bool haveSdCard = true;
+
 // -- The currently running "program", aka the mode to display and act on -- //
 // Programs:
 // 1 - LoRa terminal
 // 2 - LoRa Beacon
-volatile int current_program = 1;
+// 4 - Badge dispay
+volatile int current_program = 4;
 volatile bool switch_programs = true;
 volatile bool shown_status = false;
 
@@ -190,6 +203,21 @@ void setup() {
   num_lines = 0;
   tft.begin();
 
+  // -- SD Card init --- // 
+  pinMode(GUESS_PIN, INPUT_PULLUP);
+  
+  if (!SD.begin(SD_CS, SD_SCK_MHZ(1))){
+    haveSdCard = false;
+    badge.haveSdCard = false;
+  }
+
+  if (haveSdCard){
+    Serial.println("Saw SD card");
+  }
+  else{
+    Serial.println("No SD card");
+  }
+
   // --- Radio init --- //
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
@@ -306,6 +334,7 @@ void loop() {
   if (switch_programs){
 
     switch (current_program){
+      case 4 : badge.draw_badge(); break;
       case 2 : 
         draw_window();
         screen_print_ln("Beacon Start");
